@@ -1,0 +1,7 @@
+services:
+  bot:
+    image: ghcr.io/fyko/scer-legendary-bot:latest
+    env_file:
+      - stack.env
+    volumes:
+      - /data/scer/sqlite:/app/data/
