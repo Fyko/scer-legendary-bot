@@ -1,6 +1,14 @@
 import type Database from 'bun:sqlite';
 import { stripIndents } from 'common-tags';
-import { bold, underline, userMention, type ChatInputCommandInteraction } from 'discord.js';
+import {
+	bold,
+	italic,
+	time,
+	TimestampStyles,
+	underline,
+	userMention,
+	type ChatInputCommandInteraction,
+} from 'discord.js';
 
 export async function generateLeaderboard(
 	db: Database,
@@ -12,7 +20,10 @@ export async function generateLeaderboard(
 		.query('select user_id, count(*) as count from leggies group by user_id order by count desc;')
 		.all() as { count: number; user_id: string }[];
 
-	const lines: string[] = [];
+	const now = new Date();
+	const lines: string[] = [
+		`Last updated on ${time(now, TimestampStyles.LongDate)} (${time(now, TimestampStyles.RelativeTime)}`,
+	];
 	const headings = ['# 🥇 `{{ number }}` Leggies', '## 🥈 `{{ number }}` Leggies', '### 🥉 `{{ number }}` Leggies'];
 
 	// create three arrays of leggies which take the top 3 spods. it is possible to have a tie for all 3 places
@@ -49,6 +60,8 @@ export async function generateLeaderboard(
 			lines.push(str);
 		}
 	}
+
+	lines.push(italic('ℹ️ Note: The order of users for each leggy count is random.'));
 
 	// todo(fyko): 4,000 character message splitting
 
