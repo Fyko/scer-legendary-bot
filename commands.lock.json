@@ -1,0 +1,52 @@
+[
+	{
+		"name": "Register Leggy",
+		"description": null,
+		"type": 3,
+		"contexts": [
+			0,
+			1,
+			2
+		],
+		"integration_types": [
+			0,
+			1
+		]
+	},
+	{
+		"name": "generate-leaderboard",
+		"description": "Generates the leaderboard messages.",
+		"type": 1,
+		"contexts": [
+			0,
+			1,
+			2
+		],
+		"integration_types": [
+			0,
+			1
+		]
+	},
+	{
+		"name": "seed",
+		"description": "Seeds the database with some data.",
+		"type": 1,
+		"options": [
+			{
+				"name": "file",
+				"description": "A CSV (count, user_id) file with the data to seed.",
+				"type": 11,
+				"required": true
+			}
+		],
+		"contexts": [
+			0,
+			1,
+			2
+		],
+		"integration_types": [
+			0,
+			1
+		]
+	}
+]

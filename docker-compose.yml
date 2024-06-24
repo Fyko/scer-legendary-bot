@@ -1,5 +1,11 @@
-version: "3.8"
+version: '3.8'
 
 services:
   bot:
     build: .
+    environment:
+      - ENV=production
+      - DISCORD_TOKEN
+      - CARTER_USER_ID
+    volumes:
+      - ./data-prod/:/app/data/
