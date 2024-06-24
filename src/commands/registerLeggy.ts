@@ -1,13 +1,23 @@
 import type Database from 'bun:sqlite';
 import { stripIndents } from 'common-tags';
-import { inlineCode, type MessageContextMenuCommandInteraction } from 'discord.js';
+import {
+	ActionRowBuilder,
+	ButtonBuilder,
+	ButtonStyle,
+	ComponentType,
+	DiscordjsError,
+	DiscordjsErrorCodes,
+	inlineCode,
+	type MessageContextMenuCommandInteraction,
+} from 'discord.js';
+import { ulid } from 'ulid';
 import { countLeggiesForUser, LeggyEntity } from '../db';
 
 export async function registerLeggy(
 	db: Database,
 	interaction: MessageContextMenuCommandInteraction<'cached'>,
 ): Promise<void> {
-	await interaction.deferReply({ ephemeral: true });
+	const reply = await interaction.deferReply({ ephemeral: true });
 	const message = interaction.targetMessage;
 
 	const exists = db
@@ -43,10 +53,47 @@ export async function registerLeggy(
 	})!;
 	const count = countLeggiesForUser(db, message.author.id);
 
+	const undoId = ulid();
+
+	const content = `Successfully registered leggy ${inlineCode(`#${count}`)} for ${message.author.toString()} (${inlineCode(
+		`#${inserted.id}`,
+	)})!`;
 	await interaction.editReply({
-		content: `Successfully registered leggy ${inlineCode(`#${count}`)} for ${message.author.toString()} (${inlineCode(
-			`#${inserted.id}`,
-		)})!`,
-		components: [],
+		content,
+		components: [
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setStyle(ButtonStyle.Danger).setLabel('Undo').setEmoji('↩️').setCustomId(undoId),
+			),
+		],
 	});
+
+	// undo button
+	try {
+		const collected = await reply.awaitMessageComponent({
+			filter: (collected) => collected.user.id === interaction.user.id,
+			time: 15_000,
+			componentType: ComponentType.Button,
+		});
+
+		if (collected.customId === undoId) {
+			db.query('delete from leggies where id = $id').run({ $id: inserted.id });
+
+			await interaction.editReply({ content, components: [] });
+
+			return void interaction.followUp({
+				content: `Successfully deleted leggy reaction ${inlineCode(`#${inserted.id}`)}.`,
+				components: [],
+			});
+		}
+	} catch (error: unknown) {
+		// timed out
+		if (error instanceof DiscordjsError && error.code === DiscordjsErrorCodes.InteractionCollectorError) {
+			return void interaction.editReply({
+				content,
+				components: [],
+			});
+		} else {
+			console.error(error);
+		}
+	}
 }

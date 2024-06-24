@@ -49,3 +49,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 migrate(db);
 client.login();
+
+// listen for a close signal
+process.on('SIGINT', () => {
+	console.log('Received SIGINT, closing client');
+	client.destroy();
+	db.close();
+
+	process.exit(0);
+});
