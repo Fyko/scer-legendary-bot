@@ -22,7 +22,7 @@ export async function generateLeaderboard(
 
 	const now = new Date();
 	const lines: string[] = [
-		`Last updated on ${time(now, TimestampStyles.LongDate)} (${time(now, TimestampStyles.RelativeTime)}`,
+		`Last updated on ${time(now, TimestampStyles.LongDate)} (${time(now, TimestampStyles.RelativeTime)})`,
 	];
 	const headings = ['# 🥇 `{{ number }}` Leggies', '## 🥈 `{{ number }}` Leggies', '### 🥉 `{{ number }}` Leggies'];
 
@@ -61,7 +61,7 @@ export async function generateLeaderboard(
 		}
 	}
 
-	lines.push(italic('ℹ️ Note: The order of users for each leggy count is random.'));
+	lines.push(italic('\nℹ️ Note: The order of users for each leggy count is random.'));
 
 	// todo(fyko): 4,000 character message splitting
 
