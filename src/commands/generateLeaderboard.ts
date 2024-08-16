@@ -2,6 +2,7 @@ import type Database from 'bun:sqlite';
 import { stripIndents } from 'common-tags';
 import {
 	bold,
+	inlineCode,
 	italic,
 	time,
 	TimestampStyles,
@@ -9,6 +10,7 @@ import {
 	userMention,
 	type ChatInputCommandInteraction,
 } from 'discord.js';
+import { BoardUpdateEntity, LeggyEntity } from '../db';
 
 export async function generateLeaderboard(
 	db: Database,
@@ -16,38 +18,71 @@ export async function generateLeaderboard(
 ): Promise<void> {
 	await interaction.deferReply();
 
-	const leggies = db
-		.query('select user_id, count(*) as count from leggies group by user_id order by count desc;')
-		.all() as { count: number; user_id: string }[];
+	const rows = db.query('select id, user_id, message_url, created_at from leggies;').as(LeggyEntity).all();
+	const lastUpdate = db
+		.query('select id, created_at from board_updates order by created_at desc limit 1;')
+		.as(BoardUpdateEntity)
+		.get()!;
+	// the number of leggies added per player since the last update
+	const addedSinceLastUpdate = new Map<string, number>();
+	const count = new Map<string, number>(); // user_id -> count
+	for (const leggy of rows) {
+		// count how many the user has in total
+		const countForUser = count.get(leggy.user_id) ?? 0;
+		count.set(leggy.user_id, countForUser + 1);
+
+		// count how many the user has added since the last update
+		if (leggy.createdAt.getTime() < lastUpdate.createdAt.getTime()) continue;
+		const added = addedSinceLastUpdate.get(leggy.user_id) ?? 0;
+		addedSinceLastUpdate.set(leggy.user_id, added + 1);
+	}
+	console.log(count);
+	const counts = Array.from([...count.entries()].map(([user_id, count]) => ({ user_id, count }))).sort(
+		(a, b) => b.count - a.count,
+	);
+
+	let addedCount = 0;
+	for (const x of addedSinceLastUpdate.values()) {
+		addedCount += x;
+	}
 
 	const now = new Date();
 	const lines: string[] = [
 		`Last updated on ${time(now, TimestampStyles.LongDate)} (${time(now, TimestampStyles.RelativeTime)})`,
+		`Total Leggies: ${bold(italic(inlineCode(rows.length.toLocaleString('en-US'))))}`,
+		`Leggies added since last update: ${bold(italic(inlineCode(addedCount.toLocaleString('en-US'))))}`,
 	];
 	const headings = ['# 🥇 `{{ number }}` Leggies', '## 🥈 `{{ number }}` Leggies', '### 🥉 `{{ number }}` Leggies'];
 
 	// create three arrays of leggies which take the top 3 spods. it is possible to have a tie for all 3 places
 	for (const heading of headings) {
-		if (!leggies.length) break;
+		if (!rows.length) break;
 
-		// get the highest count of leggies
-		const highest = leggies[0].count;
-		// get all leggies with the highest
-		const players = leggies.filter((leggy) => leggy.count === highest);
-		// remove the highest leggies from the list
-		leggies.splice(0, players.length);
-		// create a string of the highest leggies
+		// get the ranking count of leggies
+		const ranking = counts[0].count;
+		// get all leggies with the ranking
+		const players = counts.filter((leggy) => leggy.count === ranking);
+		// remove the ranking leggies from the list
+		counts.splice(0, players.length);
+		// create a string of the ranking leggies
 		const str = stripIndents`
-			${heading.replace('{{ number }}', highest.toLocaleString())}
-			${players.map(({ user_id }) => userMention(user_id)).join(', ')}
+			${heading.replace('{{ number }}', ranking.toLocaleString())}
+			${players
+				.map(({ user_id }) => {
+					const count = addedSinceLastUpdate.get(user_id) ?? 0;
+					let base = userMention(user_id);
+					if (count) base += ` (+${count})`;
+					return base;
+				})
+				.join(', ')}
 		`;
 		lines.push(str);
 	}
 
 	// do other
-	if (leggies.length) {
+	if (counts.length) {
 		// chunk the remaining users by count
-		const chunked = leggies.reduce<Record<number, { count: number; user_id: string }[]>>((acc, leggy) => {
+		const chunked = counts.reduce<Record<number, { count: number; user_id: string }[]>>((acc, leggy) => {
 			if (!acc[leggy.count]) acc[leggy.count] = [];
 			acc[leggy.count].push(leggy);
 			return acc;
@@ -55,7 +90,7 @@ export async function generateLeaderboard(
 
 		lines.push('🏅 Other');
 
-		for (const [count, users] of Object.entries(chunked)) {
+		for (const [count, users] of Object.entries(chunked).reverse()) {
 			const str = `${bold(underline(count))}. ${users.map(({ user_id }) => userMention(user_id)).join(', ')}`;
 			lines.push(str);
 		}
@@ -66,4 +101,6 @@ export async function generateLeaderboard(
 	// todo(fyko): 4,000 character message splitting
 
 	interaction.editReply(lines.join('\n'));
+
+	db.query('insert into board_updates (created_at) values ($created_at);').run({ $created_at: Date.now() });
 }

@@ -21,7 +21,7 @@ export async function registerLeggy(
 	const message = interaction.targetMessage;
 
 	const exists = db
-		.prepare('select * from leggies where message_url = $message_url')
+		.query('select * from leggies where message_url = $message_url')
 		.as(LeggyEntity)
 		.get({ $message_url: message.url });
 	if (exists) {
