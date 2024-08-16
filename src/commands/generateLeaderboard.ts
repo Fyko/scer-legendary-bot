@@ -71,7 +71,7 @@ export async function generateLeaderboard(
 				.map(({ user_id }) => {
 					const count = addedSinceLastUpdate.get(user_id) ?? 0;
 					let base = userMention(user_id);
-					if (count) base += ` (+${count})`;
+					if (count) base += ` (**🔺${count}**)`;
 					return base;
 				})
 				.join(', ')}
@@ -95,7 +95,7 @@ export async function generateLeaderboard(
 				.map(({ user_id }) => {
 					const count = addedSinceLastUpdate.get(user_id) ?? 0;
 					let base = userMention(user_id);
-					if (count) base += ` (+${count})`;
+					if (count) base += ` (**🔺${count}**)`;
 					return base;
 				})
 				.join(', ')}`;
