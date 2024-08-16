@@ -91,7 +91,14 @@ export async function generateLeaderboard(
 		lines.push('🏅 Other');
 
 		for (const [count, users] of Object.entries(chunked).reverse()) {
-			const str = `${bold(underline(count))}. ${users.map(({ user_id }) => userMention(user_id)).join(', ')}`;
+			const str = `${bold(underline(count))}. ${users
+				.map(({ user_id }) => {
+					const count = addedSinceLastUpdate.get(user_id) ?? 0;
+					let base = userMention(user_id);
+					if (count) base += ` (+${count})`;
+					return base;
+				})
+				.join(', ')}`;
 			lines.push(str);
 		}
 	}
