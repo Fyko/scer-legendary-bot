@@ -51,10 +51,13 @@ migrate(db);
 client.login();
 
 // listen for a close signal
-process.on('SIGINT', () => {
-	console.log('Received SIGINT, closing client');
-	client.destroy();
-	db.close();
+const closeSignals = ['SIGINT', 'SIGTERM'];
+for (const signale of closeSignals) {
+	process.on(signale, () => {
+		console.log(`Received ${signale}, closing client`);
+		client.destroy();
+		db.close();
 
-	process.exit(0);
-});
+		process.exit(0);
+	});
+}
