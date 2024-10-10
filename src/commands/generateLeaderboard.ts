@@ -36,6 +36,7 @@ export async function generateLeaderboard(
 		const added = addedSinceLastUpdate.get(leggy.user_id) ?? 0;
 		addedSinceLastUpdate.set(leggy.user_id, added + 1);
 	}
+
 	console.log(count);
 	const counts = Array.from([...count.entries()].map(([user_id, count]) => ({ user_id, count }))).sort(
 		(a, b) => b.count - a.count,
@@ -105,9 +106,33 @@ export async function generateLeaderboard(
 
 	lines.push(italic('\nℹ️ Note: The order of users for each leggy count is random.'));
 
-	// todo(fyko): 4,000 character message splitting
+	const chunks = smartChunk(lines, 1_950, '\n');
 
-	interaction.editReply(lines.join('\n'));
+	for (const [idx, chunk] of chunks.entries()) {
+		const content = chunk.join('\n');
+		console.debug(`Sending chunk ${idx + 1} of ${chunks.length}: ${content.length} characters`);
+
+		if (idx === 0) await interaction.editReply(content);
+		else await interaction.followUp(content);
+	}
 
 	db.query('insert into board_updates (created_at) values ($created_at);').run({ $created_at: Date.now() });
+}
+
+export function smartChunk(data: string[], maxPerChunk: number, join = ''): string[][] {
+	let buffer: string[] = [];
+	const fragments: string[][] = [];
+
+	for (const content of data) {
+		const totalBufferLength = buffer.reduce((acc, v) => acc + v.length, 0);
+
+		if (content.length + totalBufferLength + join.length <= maxPerChunk) buffer.push(content);
+		else {
+			fragments.push(buffer);
+			buffer = [];
+		}
+	}
+
+	if (buffer.length) fragments.push(buffer);
+	return fragments;
 }

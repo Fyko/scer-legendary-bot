@@ -24,6 +24,8 @@ const client = new Client({
 	}),
 });
 
+client.on(Events.Debug, (message) => console.debug(`[DEBUG] ${message}`));
+
 client.on(Events.ClientReady, () => {
 	console.log(`Logged in as ${client.user!.tag} (${client.user!.id})`);
 	const query = db.query('select count(*) as count from leggies;');
