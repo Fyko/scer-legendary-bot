@@ -14,6 +14,7 @@ CREATE TABLE `discord_user` (
 --> statement-breakpoint
 CREATE TABLE `leggy` (
 	`id` varchar(32) NOT NULL,
+	`index` serial AUTO_INCREMENT,
 	`user_id` varchar(22) NOT NULL,
 	`message_url` text,
 	`created_at` timestamp NOT NULL DEFAULT (now()),

@@ -6,6 +6,7 @@ export const leggies = mysqlTable(
 	'leggy',
 	{
 		id: varchar({ length: 32 }).primaryKey(),
+		index: serial(),
 		user_id: varchar({ length: 22 }).notNull(),
 		message_url: text(),
 		created_at: timestamp().defaultNow().notNull(),

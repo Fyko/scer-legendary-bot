@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "a2a73a16-7e87-408c-90d0-5a8a0e93b773",
+  "id": "d82ddb2a-010d-487a-a1c7-7044945355cd",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "board_update": {
@@ -91,6 +91,13 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "index": {
+          "name": "index",
+          "type": "serial",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
