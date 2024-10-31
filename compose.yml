@@ -1,0 +1,31 @@
+services:
+  bot:
+    build: .
+    environment:
+      - ENV=production
+      - DISCORD_TOKEN
+      - CARTER_USER_ID
+    volumes:
+      - ./data-prod/:/app/data/
+
+  mysql:
+    image: mysql:9.1.0
+    volumes:
+      - mysql-storage:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?mysql root password is required}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD?:mysql password is required}
+      MYSQL_USER: ${MYSQL_USER:-postgres}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-postgres}
+    ports:
+      - '${MYSQL_PORT:-3306}:3306'
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mysql-storage:

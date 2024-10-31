@@ -2,7 +2,6 @@
 import type Database from 'bun:sqlite';
 import { parse } from 'csv-parse/sync';
 import { inlineCode, type ChatInputCommandInteraction } from 'discord.js';
-import process from 'node:process';
 
 export async function seed(db: Database, interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
 	await interaction.deferReply();
