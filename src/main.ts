@@ -9,22 +9,24 @@ import { registerLeggy } from '@/commands/registerLeggy.ts';
 import type * as schema from '@/db/schema.ts';
 import { leggies, sqliteMigrated } from '@/db/schema.ts';
 import { startJobs } from '@/jobs.ts';
+import { logger } from '@/logger.ts';
 import { migrateSqlite } from '@/migrate.ts';
 
 process.env.ENV ??= 'development';
 
 // @ts-expect-error idk why bun is pooping itself here
 const migrationsFolder = Bun.fileURLToPath(new URL('../drizzle', import.meta.url));
-console.log(`Running migrations from ${migrationsFolder}`);
+logger.info(`Running migrations from ${migrationsFolder}`);
 export const db: MySql2Database<typeof schema> = drizzle({ connection: process.env.DATABASE_URL! });
 await migrate(db, { migrationsFolder });
 
 const migrated = await db.$count(sqliteMigrated);
 if (!migrated) {
-	console.log('Migrating SQLite database');
+	logger.info('Migrating SQLite database');
 	await migrateSqlite();
 }
 
+const discordLogger = logger.child({ module: 'discord' });
 export const client = new Client({
 	intents: [IntentsBitField.Flags.Guilds],
 	makeCache: Options.cacheWithLimits({
@@ -32,13 +34,13 @@ export const client = new Client({
 	}),
 });
 
-client.on(Events.Debug, (message) => console.debug(`[DEBUG] ${message}`));
+client.on(Events.Debug, (message) => discordLogger.debug(message));
 
 client.on(Events.ClientReady, async () => {
-	console.log(`Logged in as ${client.user!.tag} (${client.user!.id})`);
+	discordLogger.info(`Logged in as ${client.user!.tag} (${client.user!.id})`);
 	const count = await db.$count(leggies);
 
-	console.log(`There are ${count} leggies in the database.`);
+	discordLogger.info(`There are ${count} leggies in the database.`);
 
 	await startJobs();
 });
@@ -56,15 +58,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
 		await generateLeaderboard(interaction as ChatInputCommandInteraction<'cached'>);
 });
 
-client.on(Events.Warn, (message) => console.warn(`[WARN] ${message}`));
+client.on(Events.Warn, (message) => discordLogger.warn(`[WARN] ${message}`));
 
 client.rest.on('rateLimited', (rateLimitData) =>
-	console.warn(
-		`[WARN] Rate limited: ${rateLimitData.method} ${rateLimitData.route} (${rateLimitData.retryAfter / 1_000}s)`,
+	discordLogger.warn(
+		`Rate limited: ${rateLimitData.method} ${rateLimitData.route} (${rateLimitData.retryAfter / 1_000}s)`,
 	),
 );
 
-client.rest.on('restDebug', (message) => console.debug(`[REST DEBUG] ${message}`));
+client.rest.on('restDebug', (message) => discordLogger.debug(`[REST] ${message}`));
 
-api.listen(3_223, () => console.log('API listening on port 3223'));
+api.listen(3_223, () => logger.info('API listening on port 3223'));
 client.login();

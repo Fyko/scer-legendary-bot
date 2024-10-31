@@ -6,6 +6,7 @@ import { ip } from 'elysia-ip';
 import type { Generator } from 'elysia-rate-limit';
 import { rateLimit } from 'elysia-rate-limit';
 import { discordUser, leggies } from '@/db/schema';
+import { apiLogger, logger as parentLogger } from '@/logger';
 import { db } from '@/main';
 
 const generator: Generator<{ ip: string }> = async (_, __, { ip }) => Bun.hash(ip).toString();
@@ -15,6 +16,7 @@ export const api = new Elysia({ serve: { development: true } })
 	.use(serverTiming())
 	.use(ip())
 	.use(rateLimit({ duration: 5_000, max: 5, generator }))
+	.use(apiLogger())
 	.get('/api/v1/latest', async () => {
 		const rows = await db
 			.select()
