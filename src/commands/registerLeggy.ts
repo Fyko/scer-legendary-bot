@@ -50,7 +50,7 @@ export async function registerLeggy(interaction: MessageContextMenuCommandIntera
 		message_url: message.url,
 	});
 
-	const count = countLeggiesForUser(message.author.id);
+	const count = await countLeggiesForUser(message.author.id);
 
 	const undoId = generateKsuid('btn');
 
