@@ -70,5 +70,6 @@ client.rest.on('rateLimited', (rateLimitData) =>
 
 client.rest.on('restDebug', (message) => discordLogger.debug(`[REST] ${message}`));
 
-api.listen(3_223, () => logger.info('API listening on port 3223'));
+const port = process.env.PORT ?? 22291;
+api.listen(port, () => logger.info(`API listening on port ${port}`));
 client.login();

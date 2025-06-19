@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package.json ./
 COPY bun.lockb ./
 COPY src src
+COPY tsconfig.json ./
 RUN bun install --frozen-lockfile
 RUN bun run build
 
@@ -11,6 +12,7 @@ WORKDIR /app
 RUN apk add --no-cache tini
 COPY --from=builder /app/dist dist
 COPY --from=builder /app/package.json .
+RUN bun install --frozen-lockfile --production
 RUN mkdir /app/data
 
 CMD ["/sbin/tini", "--", "bun", "."]

@@ -10,9 +10,10 @@ import { discordUser, leggies } from '@/db/schema';
 import { apiLogger } from '@/logger';
 import { db } from '@/main';
 
+
 const generator: Generator<{ ip: string }> = async (_, __, { ip }) => Bun.hash(ip).toString();
 
-export const api = new Elysia({ serve: { development: true } })
+export const api = new Elysia()
 	.use(swagger())
 	.use(serverTiming())
 	.use(ip())
