@@ -1,1 +1,1 @@
-DROP TABLE `sqlite_migrated`;
+DROP TABLE IF EXISTS `sqlite_migrated`;
