@@ -1,4 +1,3 @@
-import type Database from 'bun:sqlite';
 import { stripIndents } from 'common-tags';
 import {
 	bold,
@@ -10,19 +9,16 @@ import {
 	userMention,
 	type ChatInputCommandInteraction,
 } from 'discord.js';
-import { BoardUpdateEntity, LeggyEntity } from '../db';
+import { desc } from 'drizzle-orm';
+import { boardUpdates, leggies } from '@/db/schema';
+import { generateKsuid } from '@/ids';
+import { db } from '@/main';
 
-export async function generateLeaderboard(
-	db: Database,
-	interaction: ChatInputCommandInteraction<'cached'>,
-): Promise<void> {
+export async function generateLeaderboard(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
 	await interaction.deferReply();
 
-	const rows = db.query('select id, user_id, message_url, created_at from leggies;').as(LeggyEntity).all();
-	const lastUpdate = db
-		.query('select id, created_at from board_updates order by created_at desc limit 1;')
-		.as(BoardUpdateEntity)
-		.get()!;
+	const rows = await db.select().from(leggies);
+	const [lastUpdate] = await db.select().from(boardUpdates).orderBy(desc(boardUpdates.created_at)).limit(1);
 	// the number of leggies added per player since the last update
 	const addedSinceLastUpdate = new Map<string, number>();
 	const count = new Map<string, number>(); // user_id -> count
@@ -32,7 +28,7 @@ export async function generateLeaderboard(
 		count.set(leggy.user_id, countForUser + 1);
 
 		// count how many the user has added since the last update
-		if (leggy.createdAt.getTime() < lastUpdate.createdAt.getTime()) continue;
+		if (leggy.created_at < lastUpdate.created_at) continue;
 		const added = addedSinceLastUpdate.get(leggy.user_id) ?? 0;
 		addedSinceLastUpdate.set(leggy.user_id, added + 1);
 	}
@@ -116,7 +112,7 @@ export async function generateLeaderboard(
 		else await interaction.followUp(content);
 	}
 
-	db.query('insert into board_updates (created_at) values ($created_at);').run({ $created_at: Date.now() });
+	await db.insert(boardUpdates).values({ id: generateKsuid('bu') });
 }
 
 export function smartChunk(data: string[], maxPerChunk: number, join = ''): string[][] {

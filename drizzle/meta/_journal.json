@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1730356972449,
+      "tag": "0000_salty_valeria_richards",
+      "breakpoints": true
+    }
+  ]
+}

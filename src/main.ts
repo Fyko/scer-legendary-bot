@@ -1,36 +1,50 @@
-import Database from 'bun:sqlite';
 import type { ChatInputCommandInteraction, MessageContextMenuCommandInteraction } from 'discord.js';
 import { Client, Events, IntentsBitField, Options } from 'discord.js';
-// eslint-disable-next-line import/order
-import process from 'node:process';
-import { generateLeaderboard } from './commands/generateLeaderboard.ts';
-import { registerLeggy } from './commands/registerLeggy.ts';
-import { seed } from './commands/seed.ts';
-import { migrate } from './db.ts';
+import type { MySql2Database } from 'drizzle-orm/mysql2';
+import { drizzle } from 'drizzle-orm/mysql2';
+import { migrate } from 'drizzle-orm/mysql2/migrator';
+import { api } from '@/api.ts';
+import { generateLeaderboard } from '@/commands/generateLeaderboard.ts';
+import { registerLeggy } from '@/commands/registerLeggy.ts';
+import type * as schema from '@/db/schema.ts';
+import { leggies, sqliteMigrated } from '@/db/schema.ts';
+import { startJobs } from '@/jobs.ts';
+import { logger } from '@/logger.ts';
+import { migrateSqlite } from '@/migrate.ts';
 
 process.env.ENV ??= 'development';
 
-const databaseUrl = process.env.ENV === 'development' ? './data/leggies.sqlite' : '/app/data/leggies.sqlite';
-console.debug(`Using database at ${databaseUrl}`);
-const db = new Database(databaseUrl, {
-	create: true,
-});
-db.exec('PRAGMA journal_mode = WAL;');
+// @ts-expect-error idk why bun is pooping itself here
+const migrationsFolder = Bun.fileURLToPath(new URL('../drizzle', import.meta.url));
+logger.info(`Running migrations from ${migrationsFolder}`);
+export const db: MySql2Database<typeof schema> = drizzle({ connection: process.env.DATABASE_URL! });
+await migrate(db, { migrationsFolder });
 
-const client = new Client({
+const migrated = await db.$count(sqliteMigrated);
+if (!migrated) {
+	logger.info('Migrating SQLite database');
+	await migrateSqlite();
+} else {
+	logger.info('SQLite database already migrated');
+}
+
+const discordLogger = logger.child({ module: 'discord' });
+export const client = new Client({
 	intents: [IntentsBitField.Flags.Guilds],
 	makeCache: Options.cacheWithLimits({
 		MessageManager: 10,
 	}),
 });
 
-client.on(Events.Debug, (message) => console.debug(`[DEBUG] ${message}`));
+client.on(Events.Debug, (message) => discordLogger.debug(message));
 
-client.on(Events.ClientReady, () => {
-	console.log(`Logged in as ${client.user!.tag} (${client.user!.id})`);
-	const query = db.query('select count(*) as count from leggies;');
-	const { count } = query.get() as { count: number };
-	console.log(`There are ${count} leggies in the database.`);
+client.on(Events.ClientReady, async () => {
+	discordLogger.info(`Logged in as ${client.user!.tag} (${client.user!.id})`);
+	const count = await db.$count(leggies);
+
+	discordLogger.info(`There are ${count} leggies in the database.`);
+
+	await startJobs();
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -39,27 +53,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
 	const name = interaction.commandName.toLowerCase();
 
 	if (name === 'register leggy' && interaction.isMessageContextMenuCommand()) {
-		await registerLeggy(db, interaction as MessageContextMenuCommandInteraction<'cached'>);
+		await registerLeggy(interaction as MessageContextMenuCommandInteraction<'cached'>);
 	}
 
-	if (interaction.isChatInputCommand()) {
-		if (name === 'generate-leaderboard')
-			await generateLeaderboard(db, interaction as ChatInputCommandInteraction<'cached'>);
-		else if (name === 'seed') await seed(db, interaction as ChatInputCommandInteraction<'cached'>);
-	}
+	if (interaction.isChatInputCommand() && name === 'generate-leaderboard')
+		await generateLeaderboard(interaction as ChatInputCommandInteraction<'cached'>);
 });
 
-migrate(db);
+client.on(Events.Warn, (message) => discordLogger.warn(`[WARN] ${message}`));
+
+client.rest.on('rateLimited', (rateLimitData) =>
+	discordLogger.warn(
+		`Rate limited: ${rateLimitData.method} ${rateLimitData.route} (${rateLimitData.retryAfter / 1_000}s)`,
+	),
+);
+
+client.rest.on('restDebug', (message) => discordLogger.debug(`[REST] ${message}`));
+
+const port = process.env.PORT ?? 22291;
+api.listen(port, () => logger.info(`API listening on port ${port}`));
 client.login();
-
-// listen for a close signal
-const closeSignals = ['SIGINT', 'SIGTERM'];
-for (const signale of closeSignals) {
-	process.on(signale, () => {
-		console.log(`Received ${signale}, closing client`);
-		client.destroy();
-		db.close();
-
-		process.exit(0);
-	});
-}

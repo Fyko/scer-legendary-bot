@@ -1,5 +1,3 @@
-import type Database from 'bun:sqlite';
-import { stripIndents } from 'common-tags';
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -10,20 +8,18 @@ import {
 	inlineCode,
 	type MessageContextMenuCommandInteraction,
 } from 'discord.js';
-import { ulid } from 'ulid';
-import { countLeggiesForUser, LeggyEntity } from '../db';
+import { eq, sql } from 'drizzle-orm';
+import { countLeggiesForUser } from '@/db';
+import { discordUser, leggies } from '@/db/schema';
+import { generateKsuid } from '@/ids';
+import { db } from '@/main';
 
-export async function registerLeggy(
-	db: Database,
-	interaction: MessageContextMenuCommandInteraction<'cached'>,
-): Promise<void> {
+export async function registerLeggy(interaction: MessageContextMenuCommandInteraction<'cached'>): Promise<void> {
 	const reply = await interaction.deferReply({ ephemeral: true });
 	const message = interaction.targetMessage;
 
-	const exists = db
-		.query('select * from leggies where message_url = $message_url')
-		.as(LeggyEntity)
-		.get({ $message_url: message.url });
+	const exists = await db.select().from(leggies).where(eq(leggies.message_url, message.url));
+
 	if (exists) {
 		return void interaction.editReply({
 			content: `Leggy already registered for ${message.url}`,
@@ -31,32 +27,35 @@ export async function registerLeggy(
 		});
 	}
 
+	// upsert discord user
+	await db
+		.insert(discordUser)
+		.values({
+			id: message.author.id,
+			display_name: message.author.displayName,
+			avatar_url: message.author.displayAvatarURL({ size: 256 }),
+		})
+		.onDuplicateKeyUpdate({
+			set: {
+				display_name: message.author.displayName,
+				refetch_at: sql`NOW() + INTERVAL 12 HOUR`,
+			},
+		});
+
 	// add it to the database
-	const query = db
-		.query(
-			stripIndents`insert into leggies (
-				user_id,
-				message_url,
-				created_at
-			) values (
-				$user_id,
-				$message_url,
-				$created_at
-			) returning id, user_id, message_url, created_at;`,
-		)
-		.as(LeggyEntity);
+	const id = generateKsuid('lggy');
+	await db.insert(leggies).values({
+		id,
+		user_id: message.author.id,
+		message_url: message.url,
+	});
 
-	const inserted = query.get({
-		$user_id: message.author.id,
-		$message_url: message.url,
-		$created_at: Date.now(),
-	})!;
-	const count = countLeggiesForUser(db, message.author.id);
+	const count = countLeggiesForUser(message.author.id);
 
-	const undoId = ulid();
+	const undoId = generateKsuid('btn');
 
 	const content = `Successfully registered leggy ${inlineCode(`#${count}`)} for ${message.author.toString()} (${inlineCode(
-		`#${inserted.id}`,
+		id,
 	)})!`;
 	await interaction.editReply({
 		content,
@@ -71,17 +70,17 @@ export async function registerLeggy(
 	try {
 		const collected = await reply.awaitMessageComponent({
 			filter: (collected) => collected.user.id === interaction.user.id,
-			time: 15_000,
+			time: 30_000,
 			componentType: ComponentType.Button,
 		});
 
 		if (collected.customId === undoId) {
-			db.query('delete from leggies where id = $id').run({ $id: inserted.id });
+			await db.delete(leggies).where(eq(leggies.id, id));
 
 			await interaction.editReply({ content, components: [] });
 
 			return void interaction.followUp({
-				content: `Successfully deleted leggy reaction ${inlineCode(`#${inserted.id}`)}.`,
+				content: `Successfully deleted leggy reaction ${inlineCode(id)}.`,
 				components: [],
 			});
 		}
