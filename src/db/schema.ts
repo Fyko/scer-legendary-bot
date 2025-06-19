@@ -28,11 +28,6 @@ export const boardUpdates = mysqlTable('board_update', {
 	created_at: timestamp().defaultNow().notNull(),
 });
 
-export const sqliteMigrated = mysqlTable('sqlite_migrated', {
-	id: serial().primaryKey(),
-	created_at: timestamp().defaultNow().notNull(),
-});
-
 export const discordUser = mysqlTable('discord_user', {
 	id: varchar({ length: 22 }).primaryKey(),
 	display_name: varchar({ length: 128 }).notNull(),
