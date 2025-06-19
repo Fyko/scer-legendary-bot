@@ -2,7 +2,7 @@ import { cors } from '@elysiajs/cors';
 import { serverTiming } from '@elysiajs/server-timing';
 import { swagger } from '@elysiajs/swagger';
 import { count, desc, eq } from 'drizzle-orm';
-import Elysia from 'elysia';
+import Elysia, { t } from 'elysia';
 import { ip } from 'elysia-ip';
 import type { Generator } from 'elysia-rate-limit';
 import { rateLimit } from 'elysia-rate-limit';
@@ -16,20 +16,22 @@ export const api = new Elysia({ serve: { development: true } })
 	.use(swagger())
 	.use(serverTiming())
 	.use(ip())
-	.use(rateLimit({ duration: 5_000, max: 5, generator }))
+	.use(rateLimit({ duration: 5_000, max: 10, generator }))
 	.use(apiLogger())
 	.use(cors())
-	.get('/api/v1/latest', async () => {
+	.get('/api/v1/latest', async ({ query }) => {
 		const rows = await db
 			.select()
 			.from(leggies)
 			.leftJoin(discordUser, eq(discordUser.id, leggies.user_id))
-			.limit(10)
+			.limit(query.limit)
+			.offset((query.page - 1) * query.limit)
 			.orderBy(desc(leggies.created_at));
 
 		return rows.map(({ leggy, discord_user: user }) => ({
 			id: leggy!.id,
 			index: leggy!.index,
+			url: leggy!.message_url,
 			user: {
 				id: user?.id,
 				username: user?.display_name,
@@ -37,6 +39,11 @@ export const api = new Elysia({ serve: { development: true } })
 			},
 			created_at: leggy!.created_at,
 		}));
+	}, {
+		query: t.Object({
+			limit: t.Number({ default: 10 }),
+			page: t.Number({ default: 1 }),
+		})
 	})
 	.get('/api/v1/leaderboard', async () => {
 		// select

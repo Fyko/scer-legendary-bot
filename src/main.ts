@@ -24,6 +24,8 @@ const migrated = await db.$count(sqliteMigrated);
 if (!migrated) {
 	logger.info('Migrating SQLite database');
 	await migrateSqlite();
+} else {
+	logger.info('SQLite database already migrated');
 }
 
 const discordLogger = logger.child({ module: 'discord' });
