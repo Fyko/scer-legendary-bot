@@ -7,10 +7,9 @@ import { api } from '@/api.ts';
 import { generateLeaderboard } from '@/commands/generateLeaderboard.ts';
 import { registerLeggy } from '@/commands/registerLeggy.ts';
 import type * as schema from '@/db/schema.ts';
-import { leggies, sqliteMigrated } from '@/db/schema.ts';
+import { leggies } from '@/db/schema.ts';
 import { startJobs } from '@/jobs.ts';
 import { logger } from '@/logger.ts';
-import { migrateSqlite } from '@/migrate.ts';
 
 process.env.ENV ??= 'development';
 
@@ -19,14 +18,6 @@ const migrationsFolder = Bun.fileURLToPath(new URL('../drizzle', import.meta.url
 logger.info(`Running migrations from ${migrationsFolder}`);
 export const db: MySql2Database<typeof schema> = drizzle({ connection: process.env.DATABASE_URL! });
 await migrate(db, { migrationsFolder });
-
-const migrated = await db.$count(sqliteMigrated);
-if (!migrated) {
-	logger.info('Migrating SQLite database');
-	await migrateSqlite();
-} else {
-	logger.info('SQLite database already migrated');
-}
 
 const discordLogger = logger.child({ module: 'discord' });
 export const client = new Client({
