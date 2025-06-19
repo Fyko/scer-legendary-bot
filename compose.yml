@@ -1,10 +1,8 @@
 services:
   bot:
     build: .
-    environment:
-      - ENV=production
-      - DISCORD_TOKEN
-      - CARTER_USER_ID
+    env_file:
+      - .env
     volumes:
       - ./data-prod/:/app/data/
 

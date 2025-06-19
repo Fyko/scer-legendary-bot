@@ -12,6 +12,7 @@ WORKDIR /app
 RUN apk add --no-cache tini
 COPY --from=builder /app/dist dist
 COPY --from=builder /app/package.json .
+COPY drizzle /app/drizzle
 RUN bun install --frozen-lockfile --production
 RUN mkdir /app/data
 
