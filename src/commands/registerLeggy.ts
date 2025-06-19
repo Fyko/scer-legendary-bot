@@ -18,9 +18,9 @@ export async function registerLeggy(interaction: MessageContextMenuCommandIntera
 	const reply = await interaction.deferReply({ ephemeral: true });
 	const message = interaction.targetMessage;
 
-	const exists = await db.select().from(leggies).where(eq(leggies.message_url, message.url));
+	const exists = await db.select().from(leggies).where(eq(leggies.message_url, message.url)).limit(1);
 
-	if (exists) {
+	if (exists.length) {
 		return void interaction.editReply({
 			content: `Leggy already registered for ${message.url}`,
 			components: [],
