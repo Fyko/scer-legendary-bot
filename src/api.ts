@@ -77,4 +77,34 @@ export const api = new Elysia()
 			.from(counts)
 			.leftJoin(discordUser, eq(discordUser.id, counts.user_id))
 			.orderBy(desc(counts.total));
+	})
+	.get('/api/v1/users/:user_id/leggies', async ({ params, query }) => {
+		const rows = await db
+			.select()
+			.from(leggies)
+			.leftJoin(discordUser, eq(discordUser.id, leggies.user_id))
+			.where(eq(leggies.user_id, params.user_id))
+			.limit(query.limit)
+			.offset((query.page - 1) * query.limit)
+			.orderBy(desc(leggies.created_at));
+
+		return rows.map(({ leggy, discord_user: user }) => ({
+			id: leggy!.id,
+			index: leggy!.index,
+			url: leggy!.message_url,
+			user: {
+				id: user?.id,
+				username: user?.display_name,
+				avatar_url: user?.avatar_url,
+			},
+			created_at: leggy!.created_at,
+		}));
+	}, {
+		params: t.Object({
+			user_id: t.String(),
+		}),
+		query: t.Object({
+			limit: t.Number({ default: 10 }),
+			page: t.Number({ default: 1 }),
+		})
 	});
