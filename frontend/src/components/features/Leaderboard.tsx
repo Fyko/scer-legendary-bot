@@ -45,10 +45,11 @@ export const Leaderboard = memo(function Leaderboard({
 
   if (error) {
     return (
-      <Card variant="default" padding="lg" className={className}>
-        <div className="text-center text-slate-400">
-          <div className="text-xl mb-2">😕</div>
-          <div>Failed to load leaderboard</div>
+      <Card variant="glass" padding="lg" className={`text-center animate-fade-in ${className}`}>
+        <div className="text-slate-400 space-y-4">
+          <div className="text-4xl mb-4">😕</div>
+          <div className="text-lg font-medium text-white">failed to load leaderboard</div>
+          <div className="text-sm">please try refreshing the page</div>
         </div>
       </Card>
     );
@@ -56,18 +57,19 @@ export const Leaderboard = memo(function Leaderboard({
 
   if (isLoading) {
     return (
-      <div className={className}>
-        <LoadingSpinner size="lg" text="Loading leaderboard..." />
+      <div className={`animate-fade-in ${className}`}>
+        <LoadingSpinner size="lg" text="loading hall of fame..." />
       </div>
     );
   }
 
   if (!leaderboard?.length) {
     return (
-      <Card variant="default" padding="lg" className={className}>
-        <div className="text-center text-slate-400">
-          <div className="text-xl mb-2">🏆</div>
-          <div>No leaderboard data available</div>
+      <Card variant="glass" padding="lg" className={`text-center animate-fade-in ${className}`}>
+        <div className="text-slate-400 space-y-4">
+          <div className="text-4xl mb-4">🏆</div>
+          <div className="text-lg font-medium text-white">no legendary hunters yet</div>
+          <div className="text-sm">be the first to pull a legendary!</div>
         </div>
       </Card>
     );
@@ -79,64 +81,102 @@ export const Leaderboard = memo(function Leaderboard({
   const restOfLeaderboard = rankedEntries.slice(3);
 
   return (
-    <div className={className}>
-      {/* Header with Stats */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
+    <div className={`space-y-12 ${className}`}>
+      {/* Header with enhanced stats */}
+      <div className="text-center animate-fade-in">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gradient-purple mb-6 tracking-tight">
           🏆 hall of fame
         </h1>
-        <div className="text-slate-400 text-sm sm:text-base">
-          tracking {totalUsers} legendary hunters • {totalDrops} drops found
+        <div className="glass-effect rounded-2xl p-4 sm:p-6 border border-glass-200 shadow-glass max-w-lg mx-auto">
+          <div className="grid grid-cols-2 gap-6 text-center">
+            <div>
+              <div className="text-2xl sm:text-3xl font-bold text-accent-purple mb-1">
+                {totalUsers}
+              </div>
+              <div className="text-slate-400 text-sm font-medium">
+                legendary hunters
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-bold text-accent-pink mb-1">
+                {totalDrops}
+              </div>
+              <div className="text-slate-400 text-sm font-medium">
+                drops found
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Top 3 Podium */}
+      {/* Top 3 Podium with staggered animations */}
       {topThree.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
-          {topThree.map(({ entry, rank }, index) => (
-            <Link
-              key={entry.user_id}
-              to={`/users/${entry.user_id}`}
-              className="block group"
-            >
-              <PodiumCard
-                entry={entry}
-                position={(index + 1) as 1 | 2 | 3}
-                className="group-hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-              />
-            </Link>
-          ))}
+        <div className="space-y-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white text-center animate-slide-up">
+            👑 legendary elite
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            {topThree.map(({ entry, rank }, index) => (
+              <Link
+                key={entry.user_id}
+                to={`/users/${entry.user_id}`}
+                className="block group animate-scale-in"
+                style={{ animationDelay: `${0.2 + index * 0.1}s` }}
+              >
+                <PodiumCard
+                  entry={entry}
+                  position={(index + 1) as 1 | 2 | 3}
+                  className="group-hover:scale-[1.02] group-hover:-translate-y-2 transition-all duration-500 cursor-pointer"
+                />
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Rest of Leaderboard */}
+      {/* Rest of Leaderboard with improved spacing */}
       {restOfLeaderboard.length > 0 && (
-        <div className="space-y-3 sm:space-y-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">
+        <div className="space-y-6 animate-slide-up" style={{ animationDelay: '0.5s' }}>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-3">
             🎖️ legendary hunters
+            <span className="text-slate-500 text-base font-normal">
+              ({restOfLeaderboard.length} more)
+            </span>
           </h2>
           
-          {restOfLeaderboard.map(({ entry, rank }) => (
-            <Link
-              key={entry.user_id}
-              to={`/users/${entry.user_id}`}
-              className="block group"
-            >
-              <LeaderboardCard
-                entry={entry}
-                rank={rank}
-                className="group-hover:scale-[1.02] transition-all duration-300"
-              />
-            </Link>
-          ))}
+          <div className="space-y-3">
+            {restOfLeaderboard.map(({ entry, rank }, index) => (
+              <Link
+                key={entry.user_id}
+                to={`/users/${entry.user_id}`}
+                className="block group animate-slide-up"
+                style={{ animationDelay: `${0.6 + index * 0.05}s` }}
+              >
+                <LeaderboardCard
+                  entry={entry}
+                  rank={rank}
+                  className="group-hover:scale-[1.01] group-hover:-translate-y-1 transition-all duration-300"
+                />
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Additional Actions */}
-      <div className="mt-8 text-center">
-        <Button variant="ghost" size="sm">
-          🔄 refresh leaderboard
-        </Button>
+      {/* Enhanced footer actions */}
+      <div className="text-center pt-8 animate-fade-in" style={{ animationDelay: '0.8s' }}>
+        <div className="glass-effect rounded-2xl p-6 border border-glass-200 shadow-glass max-w-md mx-auto">
+          <p className="text-slate-400 text-sm mb-4">
+            updated in real-time as legends are discovered
+          </p>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="font-medium hover:text-accent-purple transition-colors duration-300"
+          >
+            🔄 refresh leaderboard
+          </Button>
+        </div>
       </div>
     </div>
   );
