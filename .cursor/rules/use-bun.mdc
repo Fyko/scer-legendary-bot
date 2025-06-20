@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This app uses Bun. Install things with bun and run things with bun and bunx.
