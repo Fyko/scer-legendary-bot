@@ -1,7 +1,6 @@
 import { memo } from 'react';
 import { Card } from './Card';
 import { Avatar } from './Avatar';
-import { Badge } from './Badge';
 import type { LeaderboardEntry } from '../../types';
 
 interface PodiumCardProps {

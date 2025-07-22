@@ -1,7 +1,6 @@
 import { Navigation } from '../components/layout/Navigation';
 import { LatestEvents } from '../components/features/LatestEvents';
 import { Leaderboard } from '../components/features/Leaderboard';
-import { useTheme } from '../hooks/useTheme';
 import type { LeaderboardPageProps } from '../types';
 
 /**

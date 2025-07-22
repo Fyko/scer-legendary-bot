@@ -116,7 +116,7 @@ export const Leaderboard = memo(function Leaderboard({
             👑 legendary elite
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-            {topThree.map(({ entry, rank }, index) => (
+            {topThree.map(({ entry }, index) => (
               <Link
                 key={entry.user_id}
                 to={`/users/${entry.user_id}`}
